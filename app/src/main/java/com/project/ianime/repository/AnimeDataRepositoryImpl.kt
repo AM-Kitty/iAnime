@@ -21,21 +21,17 @@ class AnimeDataRepositoryImpl @Inject constructor(
     private val animeDao: AnimeDao
 ) : AnimeDataRepository {
 
-    // cached the data from the Network resource
-    private var cachedAnimeItemsList : List<AnimeApiModel> ?= null
-
     override fun getAnimeListFromNetwork(): Single<List<AnimeApiModel>> {
         return animeService.getAnimeListFromNetwork()
             .subscribeOn(Schedulers.io())
             .flatMap { response ->
-                val animeList = response.animeList ?: emptyList()
+                var animeList = response.animeList ?: emptyList()
 
                 // sort anime list based on rate
-                animeList.sortedByDescending {
+                animeList = animeList.sortedByDescending {
                     it.rate
                 }
 
-                cachedAnimeItemsList = animeList
                 Single.just(animeList)
             }
             .onErrorResumeNext { exception ->
@@ -44,25 +40,25 @@ class AnimeDataRepositoryImpl @Inject constructor(
                         when {
                             it == HttpStatus.BAD_REQUEST -> {
                                 return@onErrorResumeNext Single.error(
-                                    BadRequestException(exception.message())
+                                    BadRequestException("Bad Request Error")
                                 )
                             }
 
                             it == HttpStatus.UNAUTHORIZED -> {
                                 return@onErrorResumeNext Single.error(
-                                    UnauthorizedException(exception.message())
+                                    UnauthorizedException("Unauthorized Error")
                                 )
                             }
 
                             it == HttpStatus.NOT_FOUND -> {
                                 return@onErrorResumeNext Single.error(
-                                    NotFoundException(exception.message())
+                                    NotFoundException("Not Found Error")
                                 )
                             }
 
                             it >= 500 -> {
                                 return@onErrorResumeNext Single.error(
-                                    ConnectionException(exception.message())
+                                    ConnectionException("Connection Error")
                                 )
                             }
 
